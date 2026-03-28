@@ -30,6 +30,7 @@ const { values: flags } = parseArgs({
   options: {
     setup: { type: 'boolean', default: false },
     personality: { type: 'string' },
+    identity: { type: 'string' },
     help: { type: 'boolean', default: false }
   },
   strict: false,
@@ -43,6 +44,8 @@ go-ask-a-stranger — MCP server for anonymous Q&A roulette
 Usage:
   npx go-ask-a-stranger              Start the MCP server
   npx go-ask-a-stranger --setup      Interactive setup wizard
+  npx go-ask-a-stranger --identity "wizard_dave"
+                                      Set your display name
   npx go-ask-a-stranger --personality "You are a wizard..."
                                       Set your answering personality
 
@@ -57,6 +60,13 @@ Config: ${CONFIG_PATH}
 
 if (flags.setup) {
   await runSetup()
+  process.exit(0)
+}
+
+if (flags.identity !== undefined) {
+  const config = saveConfig({ identity: flags.identity })
+  console.log(`Identity updated: ${config.identity || '(anonymous)'}`)
+  console.log(`Saved to ${CONFIG_PATH}`)
   process.exit(0)
 }
 
@@ -76,8 +86,15 @@ async function runSetup() {
 
   console.log('\n  go ask a stranger — setup\n')
 
+  const identity = await ask(
+    `  What's your name? This is shown to strangers when you ask or answer.\n` +
+    `  Leave blank to stay anonymous.\n\n` +
+    (existing.identity ? `  Current: "${existing.identity}"\n\n` : '') +
+    `  > `
+  )
+
   const personality = await ask(
-    `  Who are you? Set your personality for answering strangers.\n` +
+    `\n  Set your personality for answering strangers.\n` +
     `  Examples:\n` +
     `    "You are a wizard guarding magical treasure. Answer with suspicion and wisdom."\n` +
     `    "You are a grumpy cat who judges everyone."\n` +
@@ -97,12 +114,14 @@ async function runSetup() {
   rl.close()
 
   const config = saveConfig({
+    identity: identity.trim() || existing.identity || '',
     personality: personality.trim() || existing.personality || '',
     api: api.trim() || existing.api || 'https://goaskastranger.uk',
     apiKey: apiKey.trim() || existing.apiKey || ''
   })
 
   console.log(`\n  Saved to ${CONFIG_PATH}`)
+  console.log(`  Identity: ${config.identity || '(anonymous)'}`)
   console.log(`  Personality: "${config.personality}"`)
   console.log(`  API: ${config.api}`)
   console.log(`  API key: ${config.apiKey ? 'set' : 'none'}`)
@@ -120,6 +139,7 @@ const config = loadConfig()
 const API_BASE = (process.env.GO_ASK_API || config.api || 'https://goaskastranger.uk').replace(/\/$/, '')
 const API_KEY = process.env.GO_ASK_API_KEY || config.apiKey || ''
 const PERSONALITY = config.personality || ''
+const IDENTITY = config.identity || ''
 
 function apiHeaders(extra = {}) {
   const h = { 'Content-Type': 'application/json', ...extra }
@@ -197,10 +217,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params
 
   if (name === 'ask_a_stranger') {
+    const askBody = { question: args.question }
+    if (IDENTITY) askBody.name = IDENTITY
     const askRes = await fetch(`${API_BASE}/ask`, {
       method: 'POST',
       headers: apiHeaders(),
-      body: JSON.stringify({ question: args.question })
+      body: JSON.stringify(askBody)
     })
     if (!askRes.ok) {
       const err = await askRes.json().catch(() => ({}))
@@ -216,9 +238,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 
   if (name === 'get_question') {
+    const claimBody = {}
+    if (IDENTITY) claimBody.name = IDENTITY
     const claimRes = await fetch(`${API_BASE}/claim`, {
       method: 'POST',
-      headers: apiHeaders()
+      headers: apiHeaders(),
+      body: JSON.stringify(claimBody)
     })
     if (!claimRes.ok) {
       return {
@@ -228,17 +253,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }]
       }
     }
-    const { question_id, question_text, token } = await claimRes.json()
+    const { question_id, question_text, asker_name, token } = await claimRes.json()
 
     claims.set(question_id, token)
     setTimeout(() => claims.delete(question_id), 180000)
 
     // Build the response with personality context
+    const asker = asker_name || 'a stranger'
     let response = ''
     if (PERSONALITY) {
       response += `YOUR CHARACTER: ${PERSONALITY}\n\nStay in character when answering.\n\n---\n\n`
     }
-    response += `QUESTION FROM A STRANGER (id: ${question_id}):\n\n${question_text}\n\n`
+    response += `QUESTION FROM ${asker} (id: ${question_id}):\n\n${question_text}\n\n`
     response += `---\n\nAnswer this question${PERSONALITY ? ' in character' : ''}, then call answer_question with the question_id and your answer.`
 
     return { content: [{ type: 'text', text: response }] }
