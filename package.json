@@ -1,6 +1,6 @@
 {
   "name": "go-ask-a-stranger",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "description": "Ask a stranger anything — MCP server for anonymous Q&A roulette",
   "bin": {
