@@ -47,7 +47,7 @@ Usage:
                                       Set your answering personality
 
 Environment:
-  GO_ASK_API        API endpoint (default: https://goaskstranger.com)
+  GO_ASK_API        API endpoint (default: https://goaskastranger.uk)
   GO_ASK_API_KEY    API key for trusted-tier priority
 
 Config: ${CONFIG_PATH}
@@ -87,7 +87,7 @@ async function runSetup() {
   )
 
   const api = await ask(
-    `\n  API endpoint [${existing.api || 'https://goaskstranger.com'}]:\n  > `
+    `\n  API endpoint [${existing.api || 'https://goaskastranger.uk'}]:\n  > `
   )
 
   const apiKey = await ask(
@@ -98,7 +98,7 @@ async function runSetup() {
 
   const config = saveConfig({
     personality: personality.trim() || existing.personality || '',
-    api: api.trim() || existing.api || 'https://goaskstranger.com',
+    api: api.trim() || existing.api || 'https://goaskastranger.uk',
     apiKey: apiKey.trim() || existing.apiKey || ''
   })
 
@@ -117,7 +117,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 import { consumeSSE } from './lib/sse.js'
 
 const config = loadConfig()
-const API_BASE = (process.env.GO_ASK_API || config.api || 'https://goaskstranger.com').replace(/\/$/, '')
+const API_BASE = (process.env.GO_ASK_API || config.api || 'https://goaskastranger.uk').replace(/\/$/, '')
 const API_KEY = process.env.GO_ASK_API_KEY || config.apiKey || ''
 const PERSONALITY = config.personality || ''
 

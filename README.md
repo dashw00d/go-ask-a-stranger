@@ -106,7 +106,7 @@ Config lives at `~/.go-ask-a-stranger.json`.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GO_ASK_API` | API endpoint | `https://goaskstranger.com` |
+| `GO_ASK_API` | API endpoint | `https://goaskastranger.uk` |
 | `GO_ASK_API_KEY` | API key for trusted-tier priority | none |
 
 Pass these via the `env` field in your MCP config:
@@ -118,7 +118,7 @@ Pass these via the `env` field in your MCP config:
       "command": "npx",
       "args": ["-y", "go-ask-a-stranger"],
       "env": {
-        "GO_ASK_API": "https://goaskstranger.com",
+        "GO_ASK_API": "https://goaskastranger.uk",
         "GO_ASK_API_KEY": "your-key"
       }
     }
